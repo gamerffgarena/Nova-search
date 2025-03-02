@@ -1,25 +1,52 @@
 import requests
+import sqlite3
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from collections import Counter
+import re
+
+# Database setup
+conn = sqlite3.connect("search_data.db")
+cursor = conn.cursor()
+
+# Table create kar rahe hain
+cursor.execute('''CREATE TABLE IF NOT EXISTS search_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT UNIQUE,
+                    keywords TEXT
+                 )''')
+conn.commit()
+
+def extract_keywords(text):
+    words = re.findall(r'\b\w+\b', text.lower())  # Sab words nikal rahe hain
+    common_words = set(["the", "and", "to", "of", "a", "in", "is", "it", "you", "that"])  # Common words remove karne ke liye
+    filtered_words = [word for word in words if word not in common_words]
+    return Counter(filtered_words).most_common(10)  # Top 10 keywords
 
 def crawl_website(url):
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()  # HTTP errors ke liye
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            text = soup.get_text()
+            keywords = extract_keywords(text)
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        found_links = set()  # Duplicate links remove karne ke liye
+            cursor.execute("INSERT OR IGNORE INTO search_results (url, keywords) VALUES (?, ?)", 
+                           (url, str(keywords)))
+            conn.commit()
 
-        for link in soup.find_all('a', href=True):
-            full_url = urljoin(url, link['href'])  # Relative URL ko full URL me convert karo
-            found_links.add(full_url)
+            print(f"Crawled: {url}")
+            print(f"Top Keywords: {keywords}\n")
 
-        print("\nFound Links:")
-        for l in found_links:
-            print(l)
+            # Dusre links ke liye crawl karna
+            for link in soup.find_all('a', href=True):
+                absolute_url = requests.compat.urljoin(url, link['href'])
+                crawl_website(absolute_url)  # Recursive call
 
-    except requests.exceptions.RequestException as e:
-        print("Error:", e)
+    except Exception as e:
+        print(f"Error crawling {url}: {e}")
 
-# Test crawler
-crawl_website("https://gamerffgarena.github.io/Nova-search/")
+# Starting point
+crawl_website("https://google.com")  # Yaha tum apni website bhi de sakte ho
+
+# Database close
+conn.close()
