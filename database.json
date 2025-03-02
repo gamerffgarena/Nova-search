@@ -1,0 +1,5 @@
+[
+  {"title": "Wikipedia", "url": "https://wikipedia.org", "keywords": ["free", "encyclopedia", "articles"]},
+  {"title": "Google", "url": "https://google.com", "keywords": ["search", "engine", "AI"]},
+  {"title": "YouTube", "url": "https://youtube.com", "keywords": ["videos", "streaming", "entertainment"]}
+]
