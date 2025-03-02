@@ -8,7 +8,6 @@ import re
 conn = sqlite3.connect("search_data.db")
 cursor = conn.cursor()
 
-# Table create kar rahe hain
 cursor.execute('''CREATE TABLE IF NOT EXISTS search_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     url TEXT UNIQUE,
@@ -16,13 +15,25 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS search_results (
                  )''')
 conn.commit()
 
+visited_urls = set()
+
+# Stopwords jo remove karne hain
+COMMON_WORDS = set([
+    "the", "and", "for", "that", "with", "this", "from", "your", "more", "have",
+    "was", "his", "about", "main", "english", "other", "articles", "article",
+    "search", "content", "featured", "edit", "pages"
+])
+
 def extract_keywords(text):
-    words = re.findall(r'\b\w+\b', text.lower())  # Sab words nikal rahe hain
-    common_words = set(["the", "and", "to", "of", "a", "in", "is", "it", "you", "that"])  # Common words remove karne ke liye
-    filtered_words = [word for word in words if word not in common_words]
+    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+    filtered_words = [word for word in words if word not in COMMON_WORDS]
     return Counter(filtered_words).most_common(10)  # Top 10 keywords
 
 def crawl_website(url):
+    if url in visited_urls or "#" in url:  # Agar URL pehle visit ho chuka ya anchor link hai, toh skip karo
+        return
+    visited_urls.add(url)
+
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
@@ -34,19 +45,18 @@ def crawl_website(url):
                            (url, str(keywords)))
             conn.commit()
 
-            print(f"Crawled: {url}")
-            print(f"Top Keywords: {keywords}\n")
+            print(f"\nCrawled: {url}")
+            print(f"Top Keywords: {keywords}")
 
-            # Dusre links ke liye crawl karna
             for link in soup.find_all('a', href=True):
                 absolute_url = requests.compat.urljoin(url, link['href'])
-                crawl_website(absolute_url)  # Recursive call
+                if absolute_url.startswith("http") and "wikipedia.org" in absolute_url:  
+                    crawl_website(absolute_url)
 
     except Exception as e:
         print(f"Error crawling {url}: {e}")
 
-# Starting point
-crawl_website("https://google.com")  # Yaha tum apni website bhi de sakte ho
+# Start Crawling
+crawl_website("https://wikipedia.org")  
 
-# Database close
 conn.close()
