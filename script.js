@@ -1,4 +1,3 @@
-function search() {
-    let query = document.getElementById("searchBox").value;
-    alert("Searching: " + query);
-}
+document.querySelector("button").addEventListener("click", function() {
+    alert("Search functionality coming soon!");
+});
