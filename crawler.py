@@ -8,4 +8,4 @@ def crawl_website(url):
         for link in soup.find_all('a', href=True):
             print("Found Link:", link['href'])
 
-crawl_website("https://example.com")  # Yahan test ke liye kisi bhi website ka URL daal sakte ho
+crawl_website("https://gamerffgarena.github.io/Nova-search/")  # Yahan test ke liye kisi bhi website ka URL daal sakte ho
